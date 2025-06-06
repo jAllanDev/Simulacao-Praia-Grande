@@ -19,7 +19,7 @@ class Agent {
         this.speedModifier = 1; // Modificador de velocidade para eventos
     }
     
-    move() {
+     move() {
         // Reduzir cooldown
         if (this.cooldown > 0) this.cooldown--;
         if (this.alertTimer > 0) this.alertTimer--;
@@ -33,8 +33,9 @@ class Agent {
             this.cidadaoBehavior();
         }
         
-        // Aplicar movimento com modificador de velocidade
-        const finalSpeed = this.speed * this.speedModifier;
+        // Aplicar movimento com modificador de velocidade e velocidade do jogo
+        const gameSpeedMultiplier = window.simulation ? window.simulation.gameSpeed : 1;
+        const finalSpeed = this.speed * this.speedModifier * gameSpeedMultiplier;
         this.x += Math.cos(this.direction) * finalSpeed;
         this.y += Math.sin(this.direction) * finalSpeed;
         
@@ -65,50 +66,50 @@ class Agent {
     }
     
     ladraoBehavior() {
-        if (this.state === 'fleeing') {
-            // Fugir do GCM mais próximo
-            this.speed = this.maxSpeed * 1.5;
-            // Direção oposta ao GCM mais próximo
-            const nearestGCM = this.findNearestAgent('gcm');
-            if (nearestGCM) {
-                const dx = this.x - nearestGCM.x;
-                const dy = this.y - nearestGCM.y;
-                this.direction = Math.atan2(dy, dx);
-            }
-        } else {
-            // Procurar cidadãos com celular
-            const target = this.findNearestAgent('cidadao_com_celular');
-            if (target && this.getDistance(target) < 80) {
-                // Perseguir cidadão
-                const dx = target.x - this.x;
-                const dy = target.y - this.y;
-                this.direction = Math.atan2(dy, dx);
-                this.speed = this.maxSpeed * 1.2;
-                this.target = target;
-            } else {
-                this.speed = this.maxSpeed;
-                this.target = null;
-            }
-        }
-    }
-    
-    gcmBehavior() {
-        // Procurar ladrões próximos
-        const ladrao = this.findNearestAgent('ladrao');
-        if (ladrao && this.getDistance(ladrao) < this.detectionRadius * 2) {
-            // Perseguir ladrão
-            const dx = ladrao.x - this.x;
-            const dy = ladrao.y - this.y;
+    if (this.state === 'fleeing') {
+        // Fugir do GCM mais próximo com mais velocidade
+        this.speed = this.maxSpeed * 1.8; // Aumentado de 1.5 para 1.8
+        // Direção oposta ao GCM mais próximo
+        const nearestGCM = this.findNearestAgent('gcm');
+        if (nearestGCM) {
+            const dx = this.x - nearestGCM.x;
+            const dy = this.y - nearestGCM.y;
             this.direction = Math.atan2(dy, dx);
-            this.speed = this.maxSpeed * 1.3;
-            this.target = ladrao;
-            this.state = 'pursuing';
+        }
+    } else {
+        // Procurar cidadãos com celular
+        const target = this.findNearestAgent('cidadao_com_celular');
+        if (target && this.getDistance(target) < 100) { // Aumentado de 80 para 100 (mais agressivos)
+            // Perseguir cidadão
+            const dx = target.x - this.x;
+            const dy = target.y - this.y;
+            this.direction = Math.atan2(dy, dx);
+            this.speed = this.maxSpeed * 1.3; // Aumentado de 1.2 para 1.3
+            this.target = target;
         } else {
             this.speed = this.maxSpeed;
             this.target = null;
-            this.state = 'normal';
         }
     }
+}
+    
+   gcmBehavior() {
+    // Procurar ladrões próximos
+    const ladrao = this.findNearestAgent('ladrao');
+    if (ladrao && this.getDistance(ladrao) < this.detectionRadius * 1.5) { // Reduzido de 2 para 1.5
+        // Perseguir ladrão
+        const dx = ladrao.x - this.x;
+        const dy = ladrao.y - this.y;
+        this.direction = Math.atan2(dy, dx);
+        this.speed = this.maxSpeed * 1.1; // Reduzido de 1.3 para 1.1 (menos velocidade de perseguição)
+        this.target = ladrao;
+        this.state = 'pursuing';
+    } else {
+        this.speed = this.maxSpeed;
+        this.target = null;
+        this.state = 'normal';
+    }
+}
     
     cidadaoBehavior() {
         // Cidadãos fogem de ladrões próximos
@@ -220,12 +221,15 @@ class Simulation {
         this.gameOver = false;
         this.totalCidadaosIniciais = 0;
         this.showingEvent = false;
+        this.currentEvent = null;
         this.eventImages = {};
         this.activeEvents = {
             gcmSlow: false,
             ladroesRapidos: false,
             ladroesLentos: false
         };
+        this.isPaused = false; // Novo: estado de pausa
+        this.gameSpeed = 1; // Novo: multiplicador de velocidade
         
         // Tornar a simulação acessível globalmente para os agentes
         window.simulation = this;
@@ -264,16 +268,21 @@ class Simulation {
         this.canvas.height = this.canvas.offsetHeight;
     }
     
-    setupControls() {
-        const sliders = ['populacao', 'ladroes', 'gcm', 'eficiencia'];
+  setupControls() {
+        const sliders = ['populacao', 'ladroes', 'gcm', 'eficiencia', 'velocidade'];
         sliders.forEach(id => {
             const slider = document.getElementById(id);
             const valueSpan = document.getElementById(id + '-value');
             
             slider.addEventListener('input', () => {
-                valueSpan.textContent = slider.value;
-                if (id !== 'eficiencia') {
-                    this.reinitializeAgents();
+                if (id === 'velocidade') {
+                    valueSpan.textContent = slider.value;
+                    this.gameSpeed = parseInt(slider.value) / 100; // Converter para multiplicador
+                } else {
+                    valueSpan.textContent = slider.value;
+                    if (id !== 'eficiencia') {
+                        this.reinitializeAgents();
+                    }
                 }
             });
         });
@@ -287,6 +296,29 @@ class Simulation {
                     this.resetAllEvents();
                 }
             });
+        }
+        
+        // Botão de pausa
+        const pauseBtn = document.getElementById('pause-btn');
+        if (pauseBtn) {
+            pauseBtn.addEventListener('click', () => {
+                this.togglePause();
+            });
+        }
+    }
+    
+    togglePause() {
+        this.isPaused = !this.isPaused;
+        const pauseBtn = document.getElementById('pause-btn');
+        
+        if (this.isPaused) {
+            pauseBtn.textContent = '▶️ Retomar';
+            pauseBtn.classList.remove('pause');
+            pauseBtn.classList.add('paused');
+        } else {
+            pauseBtn.textContent = '⏸️ Pausar';
+            pauseBtn.classList.remove('paused');
+            pauseBtn.classList.add('pause');
         }
     }
     
@@ -612,29 +644,34 @@ drawEventScreen(eventData) {
         });
     }
     
-    checkInteractions() {
-        if (this.gameOver) return;
+checkInteractions() {
+    if (this.gameOver) return;
+    
+    const eficiencia = parseInt(document.getElementById('eficiencia').value) / 100;
+    const rouboDistance = 20;
+    const prisaoDistance = 15; // Reduzido de 25 para 15 (GCM precisa estar MUITO próximo)
+    const chanceBasePrisao = 0.08; // Reduzido drasticamente de 0.2 para 0.08 (8%)
+    
+    // Verificar tentativas de roubo
+    for (let i = 0; i < this.agents.length; i++) {
+        const ladrao = this.agents[i];
         
-        const eficiencia = parseInt(document.getElementById('eficiencia').value) / 100;
-        const rouboDistance = 20;
-        const prisaoDistance = 25;
-        
-        // Verificar tentativas de roubo
-        for (let i = 0; i < this.agents.length; i++) {
-            const ladrao = this.agents[i];
+        if (ladrao.type === 'ladrao') {
+            // Resetar estado de fuga
+            ladrao.state = 'normal';
             
-            if (ladrao.type === 'ladrao') {
-                // Resetar estado de fuga
-                ladrao.state = 'normal';
-                
-                // Verificar se há GCM próximo (ladrão fica em estado de fuga)
-                for (let j = 0; j < this.agents.length; j++) {
-                    const gcm = this.agents[j];
-                    if (gcm.type === 'gcm' && ladrao.getDistance(gcm) < gcm.detectionRadius) {
-                        ladrao.state = 'fleeing';
+            // Verificar se há GCM próximo (ladrão fica em estado de fuga)
+            for (let j = 0; j < this.agents.length; j++) {
+                const gcm = this.agents[j];
+                if (gcm.type === 'gcm' && ladrao.getDistance(gcm) < gcm.detectionRadius) {
+                    ladrao.state = 'fleeing';
+                    
+                    // Se GCM está muito próximo, tentar prender ladrão
+                    if (ladrao.getDistance(gcm) < prisaoDistance) {
+                        // Chance combinada: chance base (8%) * eficiência do slider
+                        const chanceTotal = chanceBasePrisao * eficiencia;
                         
-                        // Se GCM está muito próximo, prender ladrão
-                        if (ladrao.getDistance(gcm) < prisaoDistance && Math.random() < eficiencia) {
+                        if (Math.random() < chanceTotal) {
                             this.agents.splice(i, 1);
                             this.prisoes++;
                             this.updateCounters();
@@ -644,44 +681,46 @@ drawEventScreen(eventData) {
                         }
                     }
                 }
-                
-                // Se não foi preso, verificar roubos
-                if (i >= 0 && i < this.agents.length && ladrao.state !== 'fleeing') {
-                    for (let k = 0; k < this.agents.length; k++) {
-                        const cidadao = this.agents[k];
+            }
+            
+            // Se não foi preso, verificar roubos
+            if (i >= 0 && i < this.agents.length && ladrao.state !== 'fleeing') {
+                for (let k = 0; k < this.agents.length; k++) {
+                    const cidadao = this.agents[k];
+                    
+                    if (cidadao.type === 'cidadao_com_celular' && 
+                        ladrao.getDistance(cidadao) < rouboDistance) {
                         
-                        if (cidadao.type === 'cidadao_com_celular' && 
-                            ladrao.getDistance(cidadao) < rouboDistance) {
-                            
-                            // Verificar se há GCM próximo o suficiente para impedir o roubo
-                            let rouboImpeditoPorGCM = false;
-                            
-                            for (let l = 0; l < this.agents.length; l++) {
-                                const gcm = this.agents[l];
-                                if (gcm.type === 'gcm' && 
-                                    ladrao.getDistance(gcm) < gcm.detectionRadius * 1.2) {
-                                    rouboImpeditoPorGCM = true;
-                                    break;
-                                }
-                            }
-                            
-                            if (!rouboImpeditoPorGCM) {
-                                // Executar roubo
-                                cidadao.type = 'cidadao_sem_celular';
-                                this.roubos++;
-                                this.updateCounters();
-                                this.createRouboEffect(cidadao.x, cidadao.y);
-                                
-                                // Alertar GCMs próximos se houver cidadãos com celular na área
-                                this.alertarGCMProximo(cidadao.x, cidadao.y);
+                        // Verificar se há GCM próximo o suficiente para impedir o roubo
+                        let rouboImpeditoPorGCM = false;
+                        
+                        for (let l = 0; l < this.agents.length; l++) {
+                            const gcm = this.agents[l];
+                            // Reduzido o raio de impedimento de roubo
+                            if (gcm.type === 'gcm' && 
+                                ladrao.getDistance(gcm) < gcm.detectionRadius * 0.8) { // Reduzido de 1.2 para 0.8
+                                rouboImpeditoPorGCM = true;
                                 break;
                             }
+                        }
+                        
+                        if (!rouboImpeditoPorGCM) {
+                            // Executar roubo
+                            cidadao.type = 'cidadao_sem_celular';
+                            this.roubos++;
+                            this.updateCounters();
+                            this.createRouboEffect(cidadao.x, cidadao.y);
+                            
+                            // Alertar GCMs próximos se houver cidadãos com celular na área
+                            this.alertarGCMProximo(cidadao.x, cidadao.y);
+                            break;
                         }
                     }
                 }
             }
         }
     }
+}
     
     alertarGCMProximo(x, y) {
         // Encontrar cidadãos com celular próximos para alertar GCM
@@ -757,7 +796,7 @@ drawEventScreen(eventData) {
         document.getElementById('taxa-prisao').textContent = taxa + '%';
     }
     
-    animate() {
+animate() {
     if (this.gameOver) return;
     
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -766,28 +805,50 @@ drawEventScreen(eventData) {
     if (this.showingEvent && this.currentEvent) {
         this.drawEventScreen(this.currentEvent);
     } else {
-        // Desenhar fundo com bordas
-        this.ctx.fillStyle = '#f8f9fa';
+        // Desenhar fundo preto
+        this.ctx.fillStyle = '#000000'; // Mudado de '#f8f9fa' para preto
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // Desenhar bordas visuais
-        this.ctx.strokeStyle = '#e0e0e0';
+        // Desenhar bordas visuais mais claras para contrastar
+        this.ctx.strokeStyle = '#444444'; // Mudado de '#e0e0e0' para cinza escuro
         this.ctx.lineWidth = 2;
         this.ctx.strokeRect(1, 1, this.canvas.width - 2, this.canvas.height - 2);
         
-        // Atualizar e desenhar agentes
-        this.agents.forEach(agent => {
-            agent.move();
-            agent.draw();
-        });
-        
-        this.checkInteractions();
-        this.checkGameOver();
+        // Só atualizar e desenhar agentes se não estiver pausado
+        if (!this.isPaused) {
+            this.agents.forEach(agent => {
+                agent.move();
+                agent.draw();
+            });
+            
+            this.checkInteractions();
+            this.checkGameOver();
+            this.handleEventoDinamico();
+        } else {
+            // Se pausado, apenas desenhar os agentes na posição atual
+            this.agents.forEach(agent => {
+                agent.draw();
+            });
+            
+            // Desenhar indicador de pausa
+            this.drawPauseIndicator();
+        }
     }
     
-    this.handleEventoDinamico();
-    
     requestAnimationFrame(() => this.animate());
+}
+    
+    drawPauseIndicator() {
+        // Desenhar indicador de pausa no centro da tela
+        this.ctx.save();
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        this.ctx.fillRect(this.canvas.width / 2 - 80, this.canvas.height / 2 - 30, 160, 60);
+        
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.font = 'bold 24px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('⏸️ PAUSADO', this.canvas.width / 2, this.canvas.height / 2 + 8);
+        this.ctx.restore();
     }
 }
 

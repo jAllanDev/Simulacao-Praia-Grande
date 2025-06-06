@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simulação Roubos Praia Grande Pro Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Island+Moments&display=swap" rel="stylesheet">
-    <style>
-
+   <style>
         body {
             margin: 0;
             font-family: Arial, sans-serif;
@@ -33,8 +32,8 @@
         
         .simulation-area {
             flex: 1.0;
-            background: rgba(255, 254, 254, 0.9);
-            border: 3px solid #000000;
+            background: rgba(0, 0, 0, 0.9); /* Mudado para preto semi-transparente */
+            border: 3px solid #333333; /* Borda mais escura */
             border-radius: 10px;
             position: relative;
             display: flex;
@@ -44,7 +43,7 @@
         .title {
             text-align: center;
             font-size: 50px;
-            color: #000000;
+            color: #FFFFFF; /* Mudado para branco para contrastar com fundo preto */
             margin: 5px 0;
             font-style: italic;
             font-family: 'Island Moments'
@@ -109,13 +108,13 @@
             margin-right: 10px;
             font-size: 24px;
         }
-        
+          
         canvas {
             flex: 1;
-            background: white;
+            background: #000000; /* Fundo do canvas preto */
             border-radius: 5px;
             margin: 10px;
-            border: 2px solid #ddd;
+            border: 2px solid #444444; /* Borda mais escura */
         }
         
         .control-button {
@@ -133,6 +132,22 @@
             background: #ad1457;
         }
         
+        .control-button.pause {
+            background: #ff9800;
+        }
+        
+        .control-button.pause:hover {
+            background: #f57c00;
+        }
+        
+        .control-button.paused {
+            background: #4caf50;
+        }
+        
+        .control-button.paused:hover {
+            background: #388e3c;
+        }
+        
         .checkbox-container {
             display: flex;
             align-items: center;
@@ -141,6 +156,13 @@
         
         .checkbox-container input {
             margin-right: 10px;
+        }
+        
+        .speed-options {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: 12px;
         }
     </style>
 </head>
@@ -178,12 +200,23 @@
                 </div>
             </div>
             
+            <div class="slider-container">
+                <div class="slider-label">Velocidade do Jogo</div>
+                <input type="range" id="velocidade" class="slider" min="25" max="200" value="100">
+                <span id="velocidade-value">100</span>%
+                <div class="speed-options">
+                    <span>Lento</span>
+                    <span>Rápido</span>
+                </div>
+            </div>
+            
             <div class="checkbox-container">
                 <input type="checkbox" id="evento-dinamico">
                 <label for="evento-dinamico">Eventos Dinâmicos</label>
             </div>
             
-            <button class="control-button" onclick="location.reload()">Resetar Simulação</button>
+            <button class="control-button pause" id="pause-btn">⏸️ Pausar</button>
+            <button class="control-button" onclick="location.reload()">🔄 Resetar Simulação</button>
         </div>
         
         <!-- Área de Simulação -->
