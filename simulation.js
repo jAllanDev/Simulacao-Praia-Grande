@@ -215,6 +215,8 @@ class Simulation {
         this.prisoes = 0;
         this.eventoDinamico = false;
         this.eventTimer = 0;
+        this.gameOver = false;
+        this.totalCidadaosIniciais = 0;
         
         // Tornar a simulação acessível globalmente para os agentes
         window.simulation = this;
@@ -256,9 +258,12 @@ class Simulation {
     
     initializeAgents() {
         this.agents = [];
+        this.gameOver = false;
         const pop = parseInt(document.getElementById('populacao').value);
         const ladroes = parseInt(document.getElementById('ladroes').value);
         const gcm = parseInt(document.getElementById('gcm').value);
+        
+        this.totalCidadaosIniciais = pop;
         
         // Margem para spawnar agentes (evitar spawnar nas bordas)
         const margin = 20;
@@ -302,7 +307,147 @@ class Simulation {
         this.initializeAgents();
     }
     
+    checkGameOver() {
+        if (this.gameOver) return;
+        
+        const cidadaosComCelular = this.agents.filter(a => a.type === 'cidadao_com_celular').length;
+        const ladroes = this.agents.filter(a => a.type === 'ladrao').length;
+        
+        // Caso 1: Todos os cidadãos foram roubados (nenhum cidadão com celular restante)
+        if (cidadaosComCelular === 0 && this.totalCidadaosIniciais > 0) {
+            this.gameOver = true;
+            this.showGameOverScreen('todos_roubados');
+            return;
+        }
+        
+        // Caso 2: Todos os ladrões foram presos
+        if (ladroes === 0 && this.prisoes > 0) {
+            this.gameOver = true;
+            this.showGameOverScreen('todos_presos');
+            return;
+        }
+    }
+    
+    showGameOverScreen(tipo) {
+        // Pausar a animação
+        this.gameOver = true;
+        
+        // Limpar o canvas
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Fundo semi-transparente
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        if (tipo === 'todos_roubados') {
+            this.drawTodosRoubadosScreen();
+        } else if (tipo === 'todos_presos') {
+            this.drawTodosPressosScreen();
+        }
+        
+        // Botão de reiniciar
+        this.drawRestartButton();
+    }
+    
+    drawTodosRoubadosScreen() {
+        // Título principal
+        this.ctx.fillStyle = '#FF4444';
+        this.ctx.font = 'bold 42px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('Mas o Estado é eficiente?', this.canvas.width / 2, this.canvas.height / 2 - 120);
+        
+        // Subtítulo
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.font = 'bold 28px Arial';
+        this.ctx.fillText('Todos foram roubados! 😱', this.canvas.width / 2, this.canvas.height / 2 - 70);
+        
+        // Estatísticas
+        const ladroesRestantes = this.agents.filter(a => a.type === 'ladrao').length;
+        
+        this.ctx.font = '20px Arial';
+        this.ctx.fillStyle = '#FFAAAA';
+        
+        const stats = [
+            `🚨 Total de Roubos: ${this.roubos}`,
+            `🚔 Prisões Realizadas: ${this.prisoes}`,
+            `👥 Cidadãos Roubados: ${this.totalCidadaosIniciais}`,
+            `🔴 Ladrões Ainda Soltos: ${ladroesRestantes}`
+        ];
+        
+        stats.forEach((stat, index) => {
+            this.ctx.fillText(stat, this.canvas.width / 2, this.canvas.height / 2 + (index * 30) - 10);
+        });
+        
+        // Mensagem irônica
+        this.ctx.font = 'italic 16px Arial';
+        this.ctx.fillStyle = '#CCCCCC';
+        this.ctx.fillText('A criminalidade venceu desta vez...', this.canvas.width / 2, this.canvas.height / 2 + 140);
+    }
+    
+    drawTodosPressosScreen() {
+        // Título principal
+        this.ctx.fillStyle = '#4CAF50';
+        this.ctx.font = 'bold 42px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('Se lascaram! 🎉', this.canvas.width / 2, this.canvas.height / 2 - 120);
+        
+        // Subtítulo
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.font = 'bold 28px Arial';
+        this.ctx.fillText('Todos os ladrões foram presos!', this.canvas.width / 2, this.canvas.height / 2 - 70);
+        
+        // Estatísticas
+        this.ctx.font = '20px Arial';
+        this.ctx.fillStyle = '#AAFFAA';
+        
+        const stats = [
+            `🚔 Prisões Realizadas: ${this.prisoes}`,
+            `🚨 Roubos Ocorridos: ${this.roubos}`,
+            `📱 Celulares Recuperados: ${this.roubos}`,
+            `✅ Taxa de Sucesso: 100%`
+        ];
+        
+        stats.forEach((stat, index) => {
+            this.ctx.fillText(stat, this.canvas.width / 2, this.canvas.height / 2 + (index * 30) - 10);
+        });
+        
+        // Mensagem de vitória
+        this.ctx.font = 'italic 16px Arial';
+        this.ctx.fillStyle = '#CCCCCC';
+        this.ctx.fillText('A ordem foi restaurada na Praia Grande!', this.canvas.width / 2, this.canvas.height / 2 + 140);
+    }
+    
+    drawRestartButton() {
+        // Botão de reiniciar
+        const buttonX = this.canvas.width / 2 - 100;
+        const buttonY = this.canvas.height / 2 + 180;
+        const buttonWidth = 200;
+        const buttonHeight = 40;
+        
+        this.ctx.fillStyle = '#e91e63';
+        this.ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+        
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.font = 'bold 16px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('Jogar Novamente', this.canvas.width / 2, buttonY + 25);
+        
+        // Adicionar event listener para o clique
+        this.canvas.addEventListener('click', (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            if (x >= buttonX && x <= buttonX + buttonWidth &&
+                y >= buttonY && y <= buttonY + buttonHeight) {
+                location.reload();
+            }
+        });
+    }
+    
     checkInteractions() {
+        if (this.gameOver) return;
+        
         const eficiencia = parseInt(document.getElementById('eficiencia').value) / 100;
         const rouboDistance = 20;
         const prisaoDistance = 25;
@@ -426,7 +571,7 @@ class Simulation {
     }
     
     handleEventoDinamico() {
-        if (!this.eventoDinamico) return;
+        if (!this.eventoDinamico || this.gameOver) return;
         
         this.eventTimer++;
         
@@ -476,6 +621,8 @@ class Simulation {
     }
     
     animate() {
+        if (this.gameOver) return;
+        
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
         // Desenhar fundo com bordas
@@ -494,6 +641,7 @@ class Simulation {
         });
         
         this.checkInteractions();
+        this.checkGameOver();
         this.handleEventoDinamico();
         
         requestAnimationFrame(() => this.animate());
