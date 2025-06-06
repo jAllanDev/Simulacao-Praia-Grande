@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulação Roubos Praia Grande Pro Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Island+Moments&display=swap" rel="stylesheet">
+    <style>
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            background-image: url('https://cdn.bs9.com.br/upload/dn_arquivo/2022/01/costa-e-silva.jpg');
+            background-size: cover;
+            background-blend-mode: overlay;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+            gap: 30px;
+            padding: 20px;
+        }
+        
+        .menu, .legend {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: 200px;
+        }
+        
+        .simulation-area {
+            flex: 1.0;
+            background: rgba(255, 254, 254, 0.9);
+            border: 3px solid #000000;
+            border-radius: 10px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .title {
+            text-align: center;
+            font-size: 50px;
+            color: #000000;
+            margin: 5px 0;
+            font-style: italic;
+            font-family: 'Island Moments'
+        }
+        
+        .pro-edition {
+            color: #e91e63;
+            font-style: italic;
+        }
+        
+        .slider-container {
+            margin: 15px 0;
+        }
+        
+        .slider-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .slider {
+            width: 100%;
+            margin: 10px 0;
+        }
+        
+        .efficiency-options {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: 12px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+        
+        .color-box {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 3px;
+        }
+        
+        .results {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .result-item {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .result-icon {
+            margin-right: 10px;
+            font-size: 24px;
+        }
+        
+        canvas {
+            flex: 1;
+            background: white;
+            border-radius: 5px;
+            margin: 10px;
+            border: 2px solid #ddd;
+        }
+        
+        .control-button {
+            background: #e91e63;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px 0;
+            width: 100%;
+        }
+        
+        .control-button:hover {
+            background: #ad1457;
+        }
+        
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+        
+        .checkbox-container input {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Menu -->
+        <div class="menu">
+            <h2>Menu</h2>
+            
+            <div class="slider-container">
+                <div class="slider-label">População</div>
+                <input type="range" id="populacao" class="slider" min="10" max="50" value="20">
+                <span id="populacao-value">20</span>
+            </div>
+            
+            <div class="slider-container">
+                <div class="slider-label">Ladrões</div>
+                <input type="range" id="ladroes" class="slider" min="1" max="15" value="5">
+                <span id="ladroes-value">5</span>
+            </div>
+            
+            <div class="slider-container">
+                <div class="slider-label">GCM</div>
+                <input type="range" id="gcm" class="slider" min="1" max="10" value="3">
+                <span id="gcm-value">3</span>
+            </div>
+            
+            <div class="slider-container">
+                <div class="slider-label">Eficiência GCM</div>
+                <input type="range" id="eficiencia" class="slider" min="10" max="90" value="50">
+                <span id="eficiencia-value">50</span>%
+                <div class="efficiency-options">
+                    <span>Baixa</span>
+                    <span>Alta</span>
+                </div>
+            </div>
+            
+            <div class="checkbox-container">
+                <input type="checkbox" id="evento-dinamico">
+                <label for="evento-dinamico">Eventos Dinâmicos</label>
+            </div>
+            
+            <button class="control-button" onclick="location.reload()">Resetar Simulação</button>
+        </div>
+        
+        <!-- Área de Simulação -->
+        <div class="simulation-area">
+            <div class="title">
+                Simulação Roubos Praia Grande<br>
+                <span class="pro-edition">Pro Edition</span>
+            </div>
+            <canvas id="simulation-canvas"></canvas>
+        </div>
+        
+        <!-- Legenda e Resultados -->
+        <div class="legend">
+            <h2>Legenda</h2>
+            <div class="legend-item">
+                <div class="color-box" style="background: #4CAF50; border-radius: 50%;"></div>
+                Cidadão com celular
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background: #FFEB3B; border-radius: 50%;"></div>
+                Cidadão sem celular
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background: #F44336;"></div>
+                Ladrão
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background: #2196F3;"></div>
+                GCM
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background: #FF9800; border-radius: 50%;"></div>
+                Cidadão roubado
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background: #9E9E9E;"></div>
+                Ladrão preso
+            </div>
+            
+            <div class="results">
+                <h2>Resultados</h2>
+                <div class="result-item">
+                    <span class="result-icon">🚨</span>
+                    Roubos: <span id="roubos-count">0</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-icon">🚔</span>
+                    Prisões: <span id="prisoes-count">0</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-icon">📊</span>
+                    Taxa: <span id="taxa-prisao">0%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="simulation.js"></script>
+</body>
+</html>
