@@ -208,7 +208,6 @@ class Agent {
         return Math.sqrt(dx * dx + dy * dy);
     }
 }
-
 class Simulation {
     constructor() {
         this.canvas = document.getElementById('simulation-canvas');
@@ -228,8 +227,9 @@ class Simulation {
             ladroesRapidos: false,
             ladroesLentos: false
         };
-        this.isPaused = false; // Novo: estado de pausa
-        this.gameSpeed = 1; // Novo: multiplicador de velocidade
+        this.isPaused = false;
+        this.gameSpeed = 1;
+        this.gameStarted = false; // Novo: controla se o jogo começou
         
         // Tornar a simulação acessível globalmente para os agentes
         window.simulation = this;
@@ -237,16 +237,83 @@ class Simulation {
         this.loadEventImages();
         this.setupCanvas();
         this.setupControls();
-        this.initializeAgents();
-        this.animate();
+        this.setupStartScreen(); // Novo: configurar tela inicial
+        this.animate(); // Começar animação (mostrará tela inicial)
+    }
+
+    setupStartScreen() {
+        // Adicionar listener para iniciar o jogo
+        const startGame = () => {
+            if (!this.gameStarted) {
+                this.gameStarted = true;
+                this.initializeAgents();
+                // Remover listeners após iniciar
+                document.removeEventListener('keydown', startGame);
+                this.canvas.removeEventListener('click', startGame);
+            }
+        };
+
+        // Escutar qualquer tecla pressionada
+        document.addEventListener('keydown', startGame);
+        
+        // Também permitir clique no canvas para iniciar
+        this.canvas.addEventListener('click', startGame);
     }
     
+      drawStartScreen() {
+        // Limpar o canvas
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Fundo preto
+        this.ctx.fillStyle = '#000000';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Título principal
+        this.ctx.fillStyle = '#74b9ff';
+        this.ctx.font = 'bold 48px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('Simulação Roubos', this.canvas.width / 2, this.canvas.height / 2 - 100);
+        
+        this.ctx.fillStyle = '#e91e63';
+        this.ctx.font = 'bold 36px Arial';
+        this.ctx.fillText('Praia Grande Pro Edition', this.canvas.width / 2, this.canvas.height / 2 - 50);
+        
+        // Instruções
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.font = 'bold 24px Arial';
+        this.ctx.fillText('Pressione qualquer tecla ou clique para iniciar', this.canvas.width / 2, this.canvas.height / 2 + 20);
+        
+        // Texto piscante para chamar atenção
+        const time = Date.now();
+        const opacity = Math.sin(time * 0.005) * 0.5 + 0.5; // Criar efeito piscante
+        
+        this.ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+        this.ctx.font = 'italic 18px Arial';
+        this.ctx.fillText('Configure os parâmetros no menu à esquerda', this.canvas.width / 2, this.canvas.height / 2 + 60);
+        
+        // Adicionar algumas instruções sobre o jogo
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        this.ctx.font = '16px Arial';
+        
+        const instructions = [
+            '🟢 Verde: Cidadão com celular',
+            '🟡 Amarelo: Cidadão sem celular', 
+            '🔴 Vermelho: Ladrão',
+            '🔵 Azul: Guarda Civil (GCM)',
+            '⚙️ Configure população, ladrões e eficiência'
+        ];
+        
+        instructions.forEach((instruction, index) => {
+            this.ctx.fillText(instruction, this.canvas.width / 2, this.canvas.height / 2 + 120 + (index * 25));
+        });
+    }
+
     loadEventImages() {
         const imageFiles = [
-            { name: 'bike', src: '../Images/bike.png' },
-            { name: 'noia', src: '../Images/noia.png' },
-            { name: 'revolta', src: '../Images/revolta.png' }
-        ];
+            { name: 'bike', src: './Images/bike.png' },
+            { name: 'noia', src: './Images/noia.png' },
+            { name: 'revolta', src: './Images/revolta.png' }
+        ]
         
         imageFiles.forEach(imgData => {
             const img = new Image();
@@ -787,56 +854,60 @@ checkInteractions() {
         }
     }
     
-    updateCounters() {
-        document.getElementById('roubos-count').textContent = this.roubos;
-        document.getElementById('prisoes-count').textContent = this.prisoes;
-        
-        // Calcular taxa de sucesso
-        const taxa = this.roubos > 0 ? Math.round((this.prisoes / (this.roubos + this.prisoes)) * 100) : 0;
-        document.getElementById('taxa-prisao').textContent = taxa + '%';
-    }
-    
-animate() {
-    if (this.gameOver) return;
-    
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    
-    // Se está mostrando evento, desenhar a tela do evento
-    if (this.showingEvent && this.currentEvent) {
-        this.drawEventScreen(this.currentEvent);
-    } else {
-        // Desenhar fundo preto
-        this.ctx.fillStyle = '#000000'; // Mudado de '#f8f9fa' para preto
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // Desenhar bordas visuais mais claras para contrastar
-        this.ctx.strokeStyle = '#444444'; // Mudado de '#e0e0e0' para cinza escuro
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(1, 1, this.canvas.width - 2, this.canvas.height - 2);
-        
-        // Só atualizar e desenhar agentes se não estiver pausado
-        if (!this.isPaused) {
-            this.agents.forEach(agent => {
-                agent.move();
-                agent.draw();
-            });
-            
-            this.checkInteractions();
-            this.checkGameOver();
-            this.handleEventoDinamico();
-        } else {
-            // Se pausado, apenas desenhar os agentes na posição atual
-            this.agents.forEach(agent => {
-                agent.draw();
-            });
-            
-            // Desenhar indicador de pausa
-            this.drawPauseIndicator();
-        }
-    }
-    
-    requestAnimationFrame(() => this.animate());
+ updateCounters() {
+    document.getElementById('roubos-count').textContent = this.roubos;
+    document.getElementById('prisoes-count').textContent = this.prisoes;
+    // Removido o cálculo e exibição da taxa
 }
+
+   animate() {
+        // Se o jogo não começou, mostrar tela inicial
+        if (!this.gameStarted) {
+            this.drawStartScreen();
+            requestAnimationFrame(() => this.animate());
+            return;
+        }
+        
+        if (this.gameOver) return;
+        
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Se está mostrando evento, desenhar a tela do evento
+        if (this.showingEvent && this.currentEvent) {
+            this.drawEventScreen(this.currentEvent);
+        } else {
+            // Desenhar fundo preto
+            this.ctx.fillStyle = '#000000';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            
+            // Desenhar bordas visuais mais claras para contrastar
+            this.ctx.strokeStyle = '#444444';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(1, 1, this.canvas.width - 2, this.canvas.height - 2);
+            
+            // Só atualizar e desenhar agentes se não estiver pausado
+            if (!this.isPaused) {
+                this.agents.forEach(agent => {
+                    agent.move();
+                    agent.draw();
+                });
+                
+                this.checkInteractions();
+                this.checkGameOver();
+                this.handleEventoDinamico();
+            } else {
+                // Se pausado, apenas desenhar os agentes na posição atual
+                this.agents.forEach(agent => {
+                    agent.draw();
+                });
+                
+                // Desenhar indicador de pausa
+                this.drawPauseIndicator();
+            }
+        }
+        
+        requestAnimationFrame(() => this.animate());
+    }
     
     drawPauseIndicator() {
         // Desenhar indicador de pausa no centro da tela
