@@ -6,26 +6,17 @@ class Agent {
         this.type = type; // 'cidadao_com_celular', 'cidadao_sem_celular', 'ladrao', 'gcm'
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
-
-// Definir velocidade baseada no tipo
-          if (type === 'ladrao') {
-            this.speed = Math.random() * 1.6 + 0.8;
-        } else if (type === 'gcm') {
-            this.speed = Math.random() * 2 + 1.2; // GCM pode ser um pouco mais rápido
-        } else {
-            this.speed = Math.random() * 1.8 + 0.9; // Cidadãos com velocidade normal
-        }
-
-       this.direction = Math.random() * 2 * Math.PI;
+        this.speed = Math.random() * 2 + 1;
+        this.direction = Math.random() * 2 * Math.PI;
         this.radius = 8;
-        this.state = 'normal';
-        this.alertRadius = 60;
-        this.detectionRadius = 40;
-        this.target = null;
-        this.cooldown = 0;
+        this.state = 'normal'; // 'normal', 'robbing', 'fleeing', 'pursuing'
+        this.alertRadius = 60; // Raio de alerta
+        this.detectionRadius = 40; // Raio de detecção
+        this.target = null; // Alvo para perseguição
+        this.cooldown = 0; // Cooldown para ações
         this.maxSpeed = this.speed;
-        this.alertTimer = 0;
-        this.speedModifier = 1;
+        this.alertTimer = 0; // Timer para alerta visual
+        this.speedModifier = 1; // Modificador de velocidade para eventos
     }
     
      move() {
