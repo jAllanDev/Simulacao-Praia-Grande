@@ -6,17 +6,26 @@ class Agent {
         this.type = type; // 'cidadao_com_celular', 'cidadao_sem_celular', 'ladrao', 'gcm'
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
-        this.speed = Math.random() * 2 + 1;
-        this.direction = Math.random() * 2 * Math.PI;
+
+// Definir velocidade baseada no tipo
+          if (type === 'ladrao') {
+            this.speed = Math.random() * 1.5 + 0.8;
+        } else if (type === 'gcm') {
+            this.speed = Math.random() * 2 + 1.2; // GCM pode ser um pouco mais rápido
+        } else {
+            this.speed = Math.random() * 1.8 + 0.9; // Cidadãos com velocidade normal
+        }
+
+       this.direction = Math.random() * 2 * Math.PI;
         this.radius = 8;
-        this.state = 'normal'; // 'normal', 'robbing', 'fleeing', 'pursuing'
-        this.alertRadius = 60; // Raio de alerta
-        this.detectionRadius = 40; // Raio de detecção
-        this.target = null; // Alvo para perseguição
-        this.cooldown = 0; // Cooldown para ações
+        this.state = 'normal';
+        this.alertRadius = 60;
+        this.detectionRadius = 40;
+        this.target = null;
+        this.cooldown = 0;
         this.maxSpeed = this.speed;
-        this.alertTimer = 0; // Timer para alerta visual
-        this.speedModifier = 1; // Modificador de velocidade para eventos
+        this.alertTimer = 0;
+        this.speedModifier = 1;
     }
     
      move() {
@@ -642,11 +651,44 @@ drawEventScreen(eventData) {
     this.ctx.textAlign = 'center';
     this.ctx.fillText(eventData.title, this.canvas.width / 2, this.canvas.height / 2 - 280);
     
-    // Imagem (se disponível)
+    // Imagem (se disponível) com tamanho ajustado
     const img = this.eventImages[eventData.image];
     if (img) {
-        const imgWidth = 500;
-        const imgHeight = 500;
+        // Definir tamanhos específicos para cada imagem
+        let imgWidth, imgHeight;
+        
+        switch(eventData.image) {
+            case 'saidinha':
+                // Saidinha precisa ser menor e mais vertical
+                imgWidth = 650;
+                imgHeight = 500;
+                break;
+            case 'transito':
+                // Trânsito pode ser mais horizontal
+                imgWidth = 550;
+                imgHeight = 400;
+                break;
+            case 'bike':
+                // Bike mantém proporção quadrada mas menor
+                imgWidth = 500;
+                imgHeight = 500;
+                break;
+            case 'noia':
+                // Noia mantém tamanho médio
+                imgWidth = 500;
+                imgHeight = 500;
+                break;
+            case 'revolta':
+                // Revolta pode ser maior para impacto
+                imgWidth = 500;
+                imgHeight = 500;
+                break;
+            default:
+                // Tamanho padrão
+                imgWidth = 400;
+                imgHeight = 400;
+        }
+        
         const imgX = this.canvas.width / 2 - imgWidth / 2;
         const imgY = this.canvas.height / 2 - imgHeight / 2;
         
@@ -654,7 +696,7 @@ drawEventScreen(eventData) {
     } else {
         // Placeholder se imagem não carregou
         this.ctx.fillStyle = '#666';
-        this.ctx.fillRect(this.canvas.width / 2 - 250, this.canvas.height / 2 - 250, 500, 500);
+        this.ctx.fillRect(this.canvas.width / 2 - 200, this.canvas.height / 2 - 200, 400, 400);
         this.ctx.fillStyle = '#FFF';
         this.ctx.font = '24px Arial';
         this.ctx.fillText('Imagem não', this.canvas.width / 2, this.canvas.height / 2 - 20);
