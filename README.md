@@ -3,10 +3,11 @@
 
 LÓGICA CENTRAL
 
-O cidadão com celular (verde) é a presa do Ladrão (vermelho), ou seja, o agente Ladrão precisa contaminar os verdes, que se tornarão Cidadão sem celular (amarelo) caso sejam roubados. Para ser roubado, basta estarem pertos um do outro, adicionando um roubo ao contador.
+O cidadão com celular (verde) é a presa do Ladrão (vermelho), ou seja, o agente Ladrão precisa contaminar os verdes, que se tornarão Cidadão sem celular (amarelo) caso sejam roubados. Para ser roubado, basta estarem pertos um do outro, isso acionará uma perseguição e caso o ladrão o alcance, o transformará em cidadão sem celular, adicionando um roubo ao contador.
 
-O GCM (azul) é a polícia que impede os roubos, para isso acontecer, ela precisa estar perto do ladrão na hora que ele tenta roubar, caso o GCM esteja perto, ele cancela o roubo e prende o ladrão, deletando-o e adicionando uma prisão ao contador.
+O GCM (azul) é a polícia que impede os roubos, para isso ocorrer, basta o GCM se aproximar e iniciar uma perseguição com o ladrão, que iniciará o modo fuga.
 
+Há opções de eficiência da polícia, que faz com que tenham mais chances de prender o bandido. Se a eficiência for 90%, a polícia chega a níveis sobrehumanos e teleporta nos alvos. 
 
 EVENTO DINÂMICO
 
