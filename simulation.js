@@ -93,15 +93,29 @@ class Agent {
     }
 }
     
-   gcmBehavior() {
+ gcmBehavior() {
+    const eficiencia = parseInt(document.getElementById('eficiencia').value) / 100;
+    
     // Procurar ladrões próximos
     const ladrao = this.findNearestAgent('ladrao');
-    if (ladrao && this.getDistance(ladrao) < this.detectionRadius * 1.5) { // Reduzido de 2 para 1.5
+    if (ladrao && this.getDistance(ladrao) < this.detectionRadius * (1 + eficiencia)) { // Raio aumenta com eficiência
         // Perseguir ladrão
         const dx = ladrao.x - this.x;
         const dy = ladrao.y - this.y;
         this.direction = Math.atan2(dy, dx);
-        this.speed = this.maxSpeed * 1.1; // Reduzido de 1.3 para 1.1 (menos velocidade de perseguição)
+        
+        // Velocidade baseada na eficiência
+        const speedMultiplier = 1 + (eficiencia * 0.8); // De 1x a 1.8x velocidade
+        this.speed = this.maxSpeed * speedMultiplier;
+        
+        // MODO TELEPORTE: Se eficiência >= 80%, GCM pode "teleportar" para próximo do ladrão
+        if (eficiencia >= 0.8 && this.getDistance(ladrao) > 30) {
+            const teleportDistance = 25; // Teleportar para 25 pixels do ladrão
+            const angle = Math.atan2(dy, dx);
+            this.x = ladrao.x - Math.cos(angle) * teleportDistance;
+            this.y = ladrao.y - Math.sin(angle) * teleportDistance;
+        }
+        
         this.target = ladrao;
         this.state = 'pursuing';
     } else {
@@ -208,7 +222,6 @@ class Agent {
         return Math.sqrt(dx * dx + dy * dy);
     }
 }
-
 class Simulation {
     constructor() {
         this.canvas = document.getElementById('simulation-canvas');
@@ -228,8 +241,9 @@ class Simulation {
             ladroesRapidos: false,
             ladroesLentos: false
         };
-        this.isPaused = false; // Novo: estado de pausa
-        this.gameSpeed = 1; // Novo: multiplicador de velocidade
+        this.isPaused = false;
+        this.gameSpeed = 1;
+        this.gameStarted = false; // Novo: controla se o jogo começou
         
         // Tornar a simulação acessível globalmente para os agentes
         window.simulation = this;
@@ -237,16 +251,83 @@ class Simulation {
         this.loadEventImages();
         this.setupCanvas();
         this.setupControls();
-        this.initializeAgents();
-        this.animate();
+        this.setupStartScreen(); // Novo: configurar tela inicial
+        this.animate(); // Começar animação (mostrará tela inicial)
+    }
+
+    setupStartScreen() {
+        // Adicionar listener para iniciar o jogo
+        const startGame = () => {
+            if (!this.gameStarted) {
+                this.gameStarted = true;
+                this.initializeAgents();
+                // Remover listeners após iniciar
+                document.removeEventListener('keydown', startGame);
+                this.canvas.removeEventListener('click', startGame);
+            }
+        };
+
+        // Escutar qualquer tecla pressionada
+        document.addEventListener('keydown', startGame);
+        
+        // Também permitir clique no canvas para iniciar
+        this.canvas.addEventListener('click', startGame);
     }
     
+      drawStartScreen() {
+        // Limpar o canvas
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Fundo preto
+        this.ctx.fillStyle = '#000000';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Título principal
+        this.ctx.fillStyle = '#74b9ff';
+        this.ctx.font = 'bold 48px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('Simulação Roubos', this.canvas.width / 2, this.canvas.height / 2 - 100);
+        
+        this.ctx.fillStyle = '#e91e63';
+        this.ctx.font = 'bold 36px Arial';
+        this.ctx.fillText('Praia Grande Pro Edition', this.canvas.width / 2, this.canvas.height / 2 - 50);
+        
+        // Instruções
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.font = 'bold 24px Arial';
+        this.ctx.fillText('Pressione qualquer tecla ou clique para iniciar', this.canvas.width / 2, this.canvas.height / 2 + 20);
+        
+        // Texto piscante para chamar atenção
+        const time = Date.now();
+        const opacity = Math.sin(time * 0.005) * 0.5 + 0.5; // Criar efeito piscante
+        
+        this.ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+        this.ctx.font = 'italic 18px Arial';
+        this.ctx.fillText('Configure os parâmetros no menu à esquerda', this.canvas.width / 2, this.canvas.height / 2 + 60);
+        
+        // Adicionar algumas instruções sobre o jogo
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        this.ctx.font = '16px Arial';
+        
+        const instructions = [
+            '🟢 Verde: Cidadão com celular',
+            '🟡 Amarelo: Cidadão sem celular', 
+            '🔴 Vermelho: Ladrão',
+            '🔵 Azul: Guarda Civil (GCM)',
+            '⚙️ Configure população, ladrões e eficiência'
+        ];
+        
+        instructions.forEach((instruction, index) => {
+            this.ctx.fillText(instruction, this.canvas.width / 2, this.canvas.height / 2 + 120 + (index * 25));
+        });
+    }
+
     loadEventImages() {
         const imageFiles = [
-            { name: 'bike', src: '../Images/bike.png' },
-            { name: 'noia', src: '../Images/noia.png' },
-            { name: 'revolta', src: '../Images/revolta.png' }
-        ];
+            { name: 'bike', src: './Images/bike.png' },
+            { name: 'noia', src: './Images/noia.png' },
+            { name: 'revolta', src: './Images/revolta.png' }
+        ]
         
         imageFiles.forEach(imgData => {
             const img = new Image();
@@ -649,8 +730,19 @@ checkInteractions() {
     
     const eficiencia = parseInt(document.getElementById('eficiencia').value) / 100;
     const rouboDistance = 20;
-    const prisaoDistance = 15; // Reduzido de 25 para 15 (GCM precisa estar MUITO próximo)
-    const chanceBasePrisao = 0.08; // Reduzido drasticamente de 0.2 para 0.08 (8%)
+    const prisaoDistance = 20; // Aumentado de 15 para 20
+    
+    // Chance de prisão baseada na eficiência (muito mais impactante)
+    let chanceBasePrisao;
+    if (eficiencia >= 0.9) {
+        chanceBasePrisao = 0.95; // 95% de chance com 90% eficiência
+    } else if (eficiencia >= 0.7) {
+        chanceBasePrisao = 0.15 + (eficiencia - 0.7) * 2.0; // De 15% a 55%
+    } else if (eficiencia >= 0.5) {
+        chanceBasePrisao = 0.08 + (eficiencia - 0.5) * 0.35; // De 8% a 15%
+    } else {
+        chanceBasePrisao = 0.02 + (eficiencia * 0.12); // De 2% a 8%
+    }
     
     // Verificar tentativas de roubo
     for (let i = 0; i < this.agents.length; i++) {
@@ -663,28 +755,30 @@ checkInteractions() {
             // Verificar se há GCM próximo (ladrão fica em estado de fuga)
             for (let j = 0; j < this.agents.length; j++) {
                 const gcm = this.agents[j];
-                if (gcm.type === 'gcm' && ladrao.getDistance(gcm) < gcm.detectionRadius) {
+                if (gcm.type === 'gcm' && ladrao.getDistance(gcm) < gcm.detectionRadius * (1 + eficiencia * 0.5)) {
                     ladrao.state = 'fleeing';
                     
-                    // Se GCM está muito próximo, tentar prender ladrão
+                    // Se GCM está próximo o suficiente, TENTAR prender ladrão (não automático)
                     if (ladrao.getDistance(gcm) < prisaoDistance) {
-                        // Chance combinada: chance base (8%) * eficiência do slider
-                        const chanceTotal = chanceBasePrisao * eficiencia;
-                        
-                        if (Math.random() < chanceTotal) {
+                        // Aplicar a chance de prisão (agora funciona de verdade)
+                        if (Math.random() < chanceBasePrisao) {
                             this.agents.splice(i, 1);
                             this.prisoes++;
                             this.updateCounters();
                             this.createPrisaoEffect(ladrao.x, ladrao.y);
                             i--; // Ajustar índice após remoção
                             break;
+                        } else {
+                            // Falhou na prisão - ladrão escapa temporariamente
+                            ladrao.speed = ladrao.maxSpeed * 2; // Boost de velocidade por falhar
+                            ladrao.cooldown = 60; // Cooldown para não tentar prender imediatamente
                         }
                     }
                 }
             }
             
             // Se não foi preso, verificar roubos
-            if (i >= 0 && i < this.agents.length && ladrao.state !== 'fleeing') {
+            if (i >= 0 && i < this.agents.length && ladrao.state !== 'fleeing' && ladrao.cooldown === 0) {
                 for (let k = 0; k < this.agents.length; k++) {
                     const cidadao = this.agents[k];
                     
@@ -696,9 +790,9 @@ checkInteractions() {
                         
                         for (let l = 0; l < this.agents.length; l++) {
                             const gcm = this.agents[l];
-                            // Reduzido o raio de impedimento de roubo
-                            if (gcm.type === 'gcm' && 
-                                ladrao.getDistance(gcm) < gcm.detectionRadius * 0.8) { // Reduzido de 1.2 para 0.8
+                            // Raio de impedimento baseado na eficiência
+                            const raioImpedimento = gcm.detectionRadius * (0.6 + eficiencia * 0.6); // De 60% a 120% do raio
+                            if (gcm.type === 'gcm' && ladrao.getDistance(gcm) < raioImpedimento) {
                                 rouboImpeditoPorGCM = true;
                                 break;
                             }
@@ -787,56 +881,60 @@ checkInteractions() {
         }
     }
     
-    updateCounters() {
-        document.getElementById('roubos-count').textContent = this.roubos;
-        document.getElementById('prisoes-count').textContent = this.prisoes;
-        
-        // Calcular taxa de sucesso
-        const taxa = this.roubos > 0 ? Math.round((this.prisoes / (this.roubos + this.prisoes)) * 100) : 0;
-        document.getElementById('taxa-prisao').textContent = taxa + '%';
-    }
-    
-animate() {
-    if (this.gameOver) return;
-    
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    
-    // Se está mostrando evento, desenhar a tela do evento
-    if (this.showingEvent && this.currentEvent) {
-        this.drawEventScreen(this.currentEvent);
-    } else {
-        // Desenhar fundo preto
-        this.ctx.fillStyle = '#000000'; // Mudado de '#f8f9fa' para preto
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // Desenhar bordas visuais mais claras para contrastar
-        this.ctx.strokeStyle = '#444444'; // Mudado de '#e0e0e0' para cinza escuro
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(1, 1, this.canvas.width - 2, this.canvas.height - 2);
-        
-        // Só atualizar e desenhar agentes se não estiver pausado
-        if (!this.isPaused) {
-            this.agents.forEach(agent => {
-                agent.move();
-                agent.draw();
-            });
-            
-            this.checkInteractions();
-            this.checkGameOver();
-            this.handleEventoDinamico();
-        } else {
-            // Se pausado, apenas desenhar os agentes na posição atual
-            this.agents.forEach(agent => {
-                agent.draw();
-            });
-            
-            // Desenhar indicador de pausa
-            this.drawPauseIndicator();
-        }
-    }
-    
-    requestAnimationFrame(() => this.animate());
+ updateCounters() {
+    document.getElementById('roubos-count').textContent = this.roubos;
+    document.getElementById('prisoes-count').textContent = this.prisoes;
+    // Removido o cálculo e exibição da taxa
 }
+
+   animate() {
+        // Se o jogo não começou, mostrar tela inicial
+        if (!this.gameStarted) {
+            this.drawStartScreen();
+            requestAnimationFrame(() => this.animate());
+            return;
+        }
+        
+        if (this.gameOver) return;
+        
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Se está mostrando evento, desenhar a tela do evento
+        if (this.showingEvent && this.currentEvent) {
+            this.drawEventScreen(this.currentEvent);
+        } else {
+            // Desenhar fundo preto
+            this.ctx.fillStyle = '#000000';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            
+            // Desenhar bordas visuais mais claras para contrastar
+            this.ctx.strokeStyle = '#444444';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(1, 1, this.canvas.width - 2, this.canvas.height - 2);
+            
+            // Só atualizar e desenhar agentes se não estiver pausado
+            if (!this.isPaused) {
+                this.agents.forEach(agent => {
+                    agent.move();
+                    agent.draw();
+                });
+                
+                this.checkInteractions();
+                this.checkGameOver();
+                this.handleEventoDinamico();
+            } else {
+                // Se pausado, apenas desenhar os agentes na posição atual
+                this.agents.forEach(agent => {
+                    agent.draw();
+                });
+                
+                // Desenhar indicador de pausa
+                this.drawPauseIndicator();
+            }
+        }
+        
+        requestAnimationFrame(() => this.animate());
+    }
     
     drawPauseIndicator() {
         // Desenhar indicador de pausa no centro da tela
