@@ -9,7 +9,7 @@ class Agent {
 
 // Definir velocidade baseada no tipo
           if (type === 'ladrao') {
-            this.speed = Math.random() * 1.5 + 0.8;
+            this.speed = Math.random() * 1.6 + 0.8;
         } else if (type === 'gcm') {
             this.speed = Math.random() * 2 + 1.2; // GCM pode ser um pouco mais rápido
         } else {
@@ -859,7 +859,7 @@ checkInteractions() {
     
     const eficiencia = parseInt(document.getElementById('eficiencia').value) / 100;
     const rouboDistance = 20;
-    const prisaoDistance = 20; // Aumentado de 15 para 20
+    const prisaoDistance = 20; 
     
     // Chance de prisão baseada na eficiência (muito mais impactante)
     let chanceBasePrisao;
@@ -1004,8 +1004,8 @@ checkInteractions() {
         
         this.eventTimer++;
         
-        // Chance muito baixa de evento a cada frame (aproximadamente 1 evento a cada 10-15 segundos)
-        if (Math.random() < 0.0005) { // 0.05% de chance por frame
+        // Chance muito baixa de evento a cada frame (aproximadamente 1 evento a cada 15~20 segundos)
+        if (Math.random() < 0.00035) { // 0.035% de chance por frame
             this.triggerRandomEvent();
         }
     }
