@@ -223,7 +223,7 @@ class Agent {
     }
 }
 class Simulation {
-    constructor() {
+constructor() {
         this.canvas = document.getElementById('simulation-canvas');
         this.ctx = this.canvas.getContext('2d');
         this.agents = [];
@@ -241,9 +241,10 @@ class Simulation {
             ladroesRapidos: false,
             ladroesLentos: false
         };
+        this.usedEvents = []; // Novo: controla eventos já usados
         this.isPaused = false;
         this.gameSpeed = 1;
-        this.gameStarted = false; // Novo: controla se o jogo começou
+        this.gameStarted = false;
         
         // Tornar a simulação acessível globalmente para os agentes
         window.simulation = this;
@@ -251,8 +252,8 @@ class Simulation {
         this.loadEventImages();
         this.setupCanvas();
         this.setupControls();
-        this.setupStartScreen(); // Novo: configurar tela inicial
-        this.animate(); // Começar animação (mostrará tela inicial)
+        this.setupStartScreen();
+        this.animate();
     }
 
     setupStartScreen() {
@@ -322,12 +323,14 @@ class Simulation {
         });
     }
 
-    loadEventImages() {
+   loadEventImages() {
         const imageFiles = [
             { name: 'bike', src: './Images/bike.png' },
             { name: 'noia', src: './Images/noia.png' },
-            { name: 'revolta', src: './Images/revolta.png' }
-        ]
+            { name: 'revolta', src: './Images/revolta.png' },
+            { name: 'transito', src: './Images/transito.png' }, 
+            { name: 'saidinha', src: './Images/saidinha.png' }  
+        ];
         
         imageFiles.forEach(imgData => {
             const img = new Image();
@@ -336,7 +339,6 @@ class Simulation {
             };
             img.onerror = () => {
                 console.log(`Imagem não encontrada: ${imgData.src}`);
-                // Criar uma imagem placeholder
                 this.eventImages[imgData.name] = null;
             };
             img.src = imgData.src;
@@ -403,12 +405,13 @@ class Simulation {
         }
     }
     
-    resetAllEvents() {
+   resetAllEvents() {
         this.activeEvents = {
             gcmSlow: false,
             ladroesRapidos: false,
             ladroesLentos: false
         };
+        this.usedEvents = []; // Reset eventos usados
         this.applyEventEffects();
     }
     
@@ -485,10 +488,22 @@ class Simulation {
         this.initializeAgents();
     }
     
+  resetAllEvents() {
+        this.activeEvents = {
+            gcmSlow: false,
+            ladroesRapidos: false,
+            ladroesLentos: false
+        };
+        this.usedEvents = []; // Reset eventos usados
+        this.applyEventEffects();
+    }
+
+    // ...existing code...
+
     triggerRandomEvent() {
         if (this.showingEvent || this.gameOver) return;
         
-        const events = [
+        const allEvents = [
             {
                 type: 'gcm_bike',
                 title: 'O governo ficou sem verba, a GCM está de bike',
@@ -506,7 +521,7 @@ class Simulation {
                 image: 'noia',
                 effect: () => {
                     this.activeEvents.ladroesRapidos = true;
-                    this.activeEvents.ladroesLentos = false; // Reset evento contrário
+                    this.activeEvents.ladroesLentos = false;
                     this.applyEventEffects();
                 }
             },
@@ -517,13 +532,43 @@ class Simulation {
                 image: 'revolta',
                 effect: () => {
                     this.activeEvents.ladroesLentos = true;
-                    this.activeEvents.ladroesRapidos = false; // Reset evento contrário
+                    this.activeEvents.ladroesRapidos = false;
                     this.applyEventEffects();
+                }
+            },
+            {
+                type: 'farofeiros_chegando',
+                title: 'Os farofeiros estão descendo para Praia Grande',
+                description: 'Adicionado +20 pessoas com celular à população',
+                image: 'transito',
+                effect: () => {
+                    this.addCidadaosComCelular(20);
+                }
+            },
+            {
+                type: 'saidinha_presos',
+                title: 'O governo decretou saidinha para os presos relaxarem',
+                description: 'Adicionado +5 ladrões',
+                image: 'saidinha',
+                effect: () => {
+                    this.addLadroes(5);
                 }
             }
         ];
         
-        const randomEvent = events[Math.floor(Math.random() * events.length)];
+        // Filtrar eventos que ainda não foram usados
+        const availableEvents = allEvents.filter(event => !this.usedEvents.includes(event.type));
+        
+        // Se não há eventos disponíveis, não fazer nada
+        if (availableEvents.length === 0) {
+            return;
+        }
+        
+        const randomEvent = availableEvents[Math.floor(Math.random() * availableEvents.length)];
+        
+        // Marcar evento como usado
+        this.usedEvents.push(randomEvent.type);
+        
         this.showEvent(randomEvent);
     }
     
@@ -540,6 +585,48 @@ class Simulation {
         this.currentEvent = null;
     }, 3000);
 }
+
+ addCidadaosComCelular(quantidade) {
+        const margin = 20;
+        
+        for (let i = 0; i < quantidade; i++) {
+            const newAgent = new Agent(
+                margin + Math.random() * (this.canvas.width - 2 * margin),
+                margin + Math.random() * (this.canvas.height - 2 * margin),
+                'cidadao_com_celular',
+                this.canvas
+            );
+            
+            // Aplicar modificadores de velocidade se houver eventos ativos
+            newAgent.speedModifier = 1;
+            this.agents.push(newAgent);
+        }
+        
+        // Aplicar efeitos de eventos aos novos agentes
+        this.applyEventEffects();
+    }
+
+    // Novo método: adicionar ladrões
+    addLadroes(quantidade) {
+        const margin = 20;
+        
+        for (let i = 0; i < quantidade; i++) {
+            const newAgent = new Agent(
+                margin + Math.random() * (this.canvas.width - 2 * margin),
+                margin + Math.random() * (this.canvas.height - 2 * margin),
+                'ladrao',
+                this.canvas
+            );
+            
+            // Aplicar modificadores de velocidade se houver eventos ativos
+            newAgent.speedModifier = 1;
+            this.agents.push(newAgent);
+        }
+        
+        // Aplicar efeitos de eventos aos novos agentes
+        this.applyEventEffects();
+    }
+
 
 drawEventScreen(eventData) {
     // Salvar estado atual do canvas
