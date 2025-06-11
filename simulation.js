@@ -93,15 +93,29 @@ class Agent {
     }
 }
     
-   gcmBehavior() {
+ gcmBehavior() {
+    const eficiencia = parseInt(document.getElementById('eficiencia').value) / 100;
+    
     // Procurar ladrões próximos
     const ladrao = this.findNearestAgent('ladrao');
-    if (ladrao && this.getDistance(ladrao) < this.detectionRadius * 1.5) { // Reduzido de 2 para 1.5
+    if (ladrao && this.getDistance(ladrao) < this.detectionRadius * (1 + eficiencia)) { // Raio aumenta com eficiência
         // Perseguir ladrão
         const dx = ladrao.x - this.x;
         const dy = ladrao.y - this.y;
         this.direction = Math.atan2(dy, dx);
-        this.speed = this.maxSpeed * 1.1; // Reduzido de 1.3 para 1.1 (menos velocidade de perseguição)
+        
+        // Velocidade baseada na eficiência
+        const speedMultiplier = 1 + (eficiencia * 0.8); // De 1x a 1.8x velocidade
+        this.speed = this.maxSpeed * speedMultiplier;
+        
+        // MODO TELEPORTE: Se eficiência >= 80%, GCM pode "teleportar" para próximo do ladrão
+        if (eficiencia >= 0.8 && this.getDistance(ladrao) > 30) {
+            const teleportDistance = 25; // Teleportar para 25 pixels do ladrão
+            const angle = Math.atan2(dy, dx);
+            this.x = ladrao.x - Math.cos(angle) * teleportDistance;
+            this.y = ladrao.y - Math.sin(angle) * teleportDistance;
+        }
+        
         this.target = ladrao;
         this.state = 'pursuing';
     } else {
@@ -716,8 +730,19 @@ checkInteractions() {
     
     const eficiencia = parseInt(document.getElementById('eficiencia').value) / 100;
     const rouboDistance = 20;
-    const prisaoDistance = 15; // Reduzido de 25 para 15 (GCM precisa estar MUITO próximo)
-    const chanceBasePrisao = 0.08; // Reduzido drasticamente de 0.2 para 0.08 (8%)
+    const prisaoDistance = 20; // Aumentado de 15 para 20
+    
+    // Chance de prisão baseada na eficiência (muito mais impactante)
+    let chanceBasePrisao;
+    if (eficiencia >= 0.9) {
+        chanceBasePrisao = 0.95; // 95% de chance com 90% eficiência
+    } else if (eficiencia >= 0.7) {
+        chanceBasePrisao = 0.15 + (eficiencia - 0.7) * 2.0; // De 15% a 55%
+    } else if (eficiencia >= 0.5) {
+        chanceBasePrisao = 0.08 + (eficiencia - 0.5) * 0.35; // De 8% a 15%
+    } else {
+        chanceBasePrisao = 0.02 + (eficiencia * 0.12); // De 2% a 8%
+    }
     
     // Verificar tentativas de roubo
     for (let i = 0; i < this.agents.length; i++) {
@@ -730,28 +755,30 @@ checkInteractions() {
             // Verificar se há GCM próximo (ladrão fica em estado de fuga)
             for (let j = 0; j < this.agents.length; j++) {
                 const gcm = this.agents[j];
-                if (gcm.type === 'gcm' && ladrao.getDistance(gcm) < gcm.detectionRadius) {
+                if (gcm.type === 'gcm' && ladrao.getDistance(gcm) < gcm.detectionRadius * (1 + eficiencia * 0.5)) {
                     ladrao.state = 'fleeing';
                     
-                    // Se GCM está muito próximo, tentar prender ladrão
+                    // Se GCM está próximo o suficiente, TENTAR prender ladrão (não automático)
                     if (ladrao.getDistance(gcm) < prisaoDistance) {
-                        // Chance combinada: chance base (8%) * eficiência do slider
-                        const chanceTotal = chanceBasePrisao * eficiencia;
-                        
-                        if (Math.random() < chanceTotal) {
+                        // Aplicar a chance de prisão (agora funciona de verdade)
+                        if (Math.random() < chanceBasePrisao) {
                             this.agents.splice(i, 1);
                             this.prisoes++;
                             this.updateCounters();
                             this.createPrisaoEffect(ladrao.x, ladrao.y);
                             i--; // Ajustar índice após remoção
                             break;
+                        } else {
+                            // Falhou na prisão - ladrão escapa temporariamente
+                            ladrao.speed = ladrao.maxSpeed * 2; // Boost de velocidade por falhar
+                            ladrao.cooldown = 60; // Cooldown para não tentar prender imediatamente
                         }
                     }
                 }
             }
             
             // Se não foi preso, verificar roubos
-            if (i >= 0 && i < this.agents.length && ladrao.state !== 'fleeing') {
+            if (i >= 0 && i < this.agents.length && ladrao.state !== 'fleeing' && ladrao.cooldown === 0) {
                 for (let k = 0; k < this.agents.length; k++) {
                     const cidadao = this.agents[k];
                     
@@ -763,9 +790,9 @@ checkInteractions() {
                         
                         for (let l = 0; l < this.agents.length; l++) {
                             const gcm = this.agents[l];
-                            // Reduzido o raio de impedimento de roubo
-                            if (gcm.type === 'gcm' && 
-                                ladrao.getDistance(gcm) < gcm.detectionRadius * 0.8) { // Reduzido de 1.2 para 0.8
+                            // Raio de impedimento baseado na eficiência
+                            const raioImpedimento = gcm.detectionRadius * (0.6 + eficiencia * 0.6); // De 60% a 120% do raio
+                            if (gcm.type === 'gcm' && ladrao.getDistance(gcm) < raioImpedimento) {
                                 rouboImpeditoPorGCM = true;
                                 break;
                             }
