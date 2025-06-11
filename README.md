@@ -1,38 +1,117 @@
-# Simulacao-Praia-Grande
+🏖️ Simulação Roubos Praia Grande Pro Edition
+Uma simulação baseada em agentes que modela a dinâmica entre cidadãos, ladrões e guardas civis municipais (GCM) em um ambiente urbano inspirado em Praia Grande/SP.
+
+📋 Visão Geral
+Este projeto implementa uma simulação baseada em agentes onde diferentes tipos de entidades interagem em um ambiente 2D, criando comportamentos emergentes realistas através de regras simples de interação.
+
+🎯 Objetivo do Jogo
+Vitória: Prender todos os ladrões antes que roubem todos os cidadãos
+Derrota: Todos os cidadãos com celular são roubados
+🎮 Como Jogar
+Configure os parâmetros no menu lateral (população, ladrões, GCMs, eficiência)
+Pressione qualquer tecla ou clique na tela para iniciar
+Observe a simulação em tempo real
+Use os controles para pausar ou ajustar a velocidade
+🤖 Tipos de Agentes
+🟢 Cidadão com Celular
+Comportamento: Foge de ladrões próximos
+Objetivo: Sobreviver sem ser roubado
+Velocidade: 1.1x quando em fuga
+🟡 Cidadão sem Celular
+Resultado de roubo: Não é mais alvo dos ladrões
+Comportamento: Movimento aleatório
+🔴 Ladrão
+Comportamento: Persegue cidadãos com celular, foge de GCMs
+Velocidades:
+Perseguição: 1.3x velocidade base
+Fuga: 1.8x velocidade base
+Alcance de detecção: 100 pixels
+🔵 Guarda Civil Municipal (GCM)
+Comportamento: Persegue ladrões com eficiência variável
+Capacidades especiais:
+≥80% eficiência: Modo teleporte (aparece próximo ao ladrão)
+Velocidade: 1x a 2.2x baseada na eficiência
+Raio de detecção: Aumenta com eficiência
+⚙️ Sistema de Eficiência
+O parâmetro mais importante que determina as capacidades dos GCMs:
+
+Eficiência	Chance de Prisão	Velocidade	Características
+90%	95%	2.2x	Modo teleporte ativo
+70%	35%	1.8x	Alta performance
+50%	15%	1.6x	Performance média
+10%	5%	1.1x	Performance baixa
+🎲 Eventos Dinâmicos
+Sistema de eventos aleatórios que modificam o jogo (cada um só ocorre 1x por partida):
+
+🚴‍♂️ GCM de Bike
+Efeito: Velocidade dos GCMs reduzida em 50%
+Mensagem: "O governo ficou sem verba, a GCM está de bike"
+🛴 Noias de Patinete
+Efeito: Velocidade dos ladrões aumentada em 50%
+Mensagem: "Os noias alugaram patinetes elétricos"
+😡 Revolta Popular
+Efeito: Velocidade dos ladrões reduzida em 50%
+Mensagem: "A população se revoltou e linchou o nóia"
+🚗 Farofeiros Chegando
+Efeito: +20 cidadãos com celular adicionados
+Mensagem: "Os farofeiros estão descendo para Praia Grande"
+🏃‍♂️ Saidinha de Presos
+Efeito: +5 ladrões adicionados
+Mensagem: "O governo decretou saidinha para os presos relaxarem"
+
+Sistema de Prisão
+Não é automático: Baseado em chance calculada pela eficiência
+Falha na prisão: Ladrão ganha boost de velocidade temporário
+Cooldown: Impede tentativas consecutivas
+
+🎛️ Controles Disponíveis
+Parâmetro	Faixa	Padrão	Descrição
+População	10-50	40	Número de cidadãos
+Ladrões	1-15	5	Número de ladrões
+GCMs	1-10	2	Número de guardas
+Eficiência	10-90%	10%	Capacidade dos GCMs
+Velocidade	25-200%	60%	Velocidade da simulação
+Eventos	ON/OFF	ON	Eventos dinâmicos
+🏁 Condições de Fim de Jogo existentes
+
+🛠️ Estrutura Técnica
+Classes Principais
+Agent: Entidade individual com comportamentos específicos
+Simulation: Gerencia ambiente, regras e interações
+Sistemas Implementados
+Detecção de colisão: Interações entre agentes
+Pathfinding básico: Perseguição e fuga
+Sistema de eventos: Modificadores dinâmicos
+Interface responsiva: Controles em tempo real
+Efeitos visuais: Feedback visual das ações
+
+🎨 Características Visuais
+Formas diferenciadas para cada tipo de agente
+Cores dinâmicas baseadas no estado (perseguindo/fugindo)
+Alertas visuais para cidadãos em perigo
+Raios de detecção visíveis para GCMs
+Linhas de perseguição entre agentes
+Efeitos de roubo/prisão com animações
+
+🚀 Como Executar
+Clone o repositório
+Abra index.html em um navegador moderno
+Configure os parâmetros desejados
+Pressione qualquer tecla para iniciar a simulação
+
+📁 Estrutura de Arquivos
+AgentBased/
+├── Frontend/
+│   ├── index.html          # Interface principal
+│   ├── simulation.js       # Lógica da simulação
+│   └── Images/            # Imagens dos eventos
+│       ├── bike.png
+│       ├── noia.png
+│       ├── revolta.png
+│       ├── transito.png
+│       └── saidinha.png
+└── README.md              # Este arquivo
 
 
-LÓGICA CENTRAL
 
-O cidadão com celular (verde) é a presa do Ladrão (vermelho), ou seja, o agente Ladrão precisa contaminar os verdes, que se tornarão Cidadão sem celular (amarelo) caso sejam roubados. Para ser roubado, basta estarem pertos um do outro, isso acionará uma perseguição e caso o ladrão o alcance, o transformará em cidadão sem celular, adicionando um roubo ao contador.
 
-O GCM (azul) é a polícia que impede os roubos, para isso ocorrer, basta o GCM se aproximar e iniciar uma perseguição com o ladrão, que iniciará o modo fuga.
-
-Há opções de eficiência da polícia, que faz com que tenham mais chances de prender o bandido. Se a eficiência for 90%, a polícia chega a níveis sobrehumanos e teleporta nos alvos. 
-
-EVENTO DINÂMICO
-
-Quando o botão Eventos Dinâmicos estiver ativo, devem ocorrer eventos de forma aleatória mas com uma chance baixa:
-
-Evento 1: GCM bike
-Neste evento, deve aparecer a imagem que está em C:\Users\allan\Desktop\AgentBased\Images\bike.png no meio da tela, com o título em cima "O governo ficou sem verba, a GCM está de bike" e outro texto em baixo da imagem dizendo "Velocidade dos GCMs reduzida em 50%"
-O resultado é que o agente GCM deve ficar 50% mais lento
-
-Evento 2: Noias de patinetes elétricos
-Neste evento, deve aparecer a imagem que está em C:\Users\allan\Desktop\AgentBased\Images\noia.png no meio da tela, com o título em cima "Os noias alugaram patinetes elétricos" e outro texto em baixo da imagem dizendo "Velocidade dos ladrões aumentada em 50%"
-O resultado é que o agente ladrão deve ficar 50% mais rápido
-
-Evento 3: Revolta da população
-Neste evento, deve aparecer a imagem que está em C:\Users\allan\Desktop\AgentBased\Images\revolta.png no meio da tela, com o título em cima "A população se revoltou e linchou o nóia" e outro texto em baixo da imagem dizendo "Velocidade dos ladrões reduzida em 50%"
-O resultado é que o agente ladrão deve ficar 50% mais lento
-
-FINALIZAÇÃO
-
-Caso 1:
-Todos os cidadãos foram roubados
-
-Apresentar na tela o título "Mas o Estado é eficiente?" e abaixo "Todos foram roubados" e incluir estatísticas de roubos, prisões, quantidade de ladrões que sobraram e quantos cidadãos foram roubados no total.
-
-Caso 2:
-Todos os ladrões foram presos
-
-Apresentar na tela o título "Se lascaram" e abaixo "Todos os ladrões foram presos", incuir estatísticas de roubos, prisões e quantos cidadãos foram roubados no total mas apresentar como "celulares recuperados".
